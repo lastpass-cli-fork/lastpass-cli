@@ -171,6 +171,21 @@ void json_add_string_field(struct json_field *object,
 }
 
 static
+void json_add_array_field(struct json_field *object,
+			   const char *name, struct list_head *value)
+{
+	if (!value)
+		return;
+
+	struct json_field *field = xmalloc(sizeof(struct json_field));
+	field->name = name;
+	field->type = JSON_ARRAY;
+	field->children = *value;
+
+	list_add_tail(&field->siblings, &object->children);
+}
+
+static
 void account_to_json_field(struct account *account, struct json_field *obj)
 {
 	obj->name = NULL;
@@ -189,6 +204,25 @@ void account_to_json_field(struct account *account, struct json_field *obj)
 	json_add_string_field(obj, "group", account->group);
 	json_add_string_field(obj, "url", account->url);
 	json_add_string_field(obj, "note", account->note);
+
+	struct json_field array = {
+		.type = JSON_ARRAY
+	};
+	INIT_LIST_HEAD(&array.children);
+
+	struct field *child;
+	//struct json_field *child;
+	list_for_each_entry(child, &account->field_head, list) {
+	        struct json_field *field = xmalloc(sizeof(struct json_field));
+	        field->name = child->name;
+	        field->type = JSON_STRING;
+	        field->u.string_value = child->value;
+
+                list_add_tail(&field->siblings, &array.children);
+        }
+
+	json_add_array_field(obj, "fields", &array.children);
+	//json_add_array_field(obj, "fields", &account->field_head);
 }
 
 static void json_free_account_fields(struct json_field *obj)
